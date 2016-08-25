@@ -49,8 +49,8 @@ fu! s:Put(l,c,pos,m)
   let sh40=0x0360|let sh41=0x4620|let sh42=0x0360|let sh43=0x4620 " S shape
   let sh50=0x0630|let sh51=0x0264|let sh52=0x0630|let sh53=0x0264 " Z shape
   let sh60=0x0720|let sh61=0x2320|let sh62=0x2700|let sh63=0x2620 " T shape
-  
-  
+
+
   let sgn0='[]'|let sgn1='MM'|let sgn2='{}'|let sgn3='XX'|let sgn4='@@'|let sgn5='<>'|let sgn6='$$'
   exe 'norm! '.a:l.'G'.(a:c*2+1)."|a\<Esc>"
   let c=1|let r=1
@@ -133,7 +133,7 @@ endf
 fu! s:Sort()
   wh line('.')>1&&matchstr(getline(line('.')-1),'\d\+$')<s:score|move -2|endw
   let s:pos=line('.')
-  g/^$/d	" Clears empty lines
+  g/^$/d    " Clears empty lines
   11,$d _
   redr
 endf
@@ -168,12 +168,13 @@ fu! s:End()
 endf
 
 fu! s:Init()
+  let s:background=confirm('Background Color',"Black\nWhite")-1 "0=Black, 1=White
   let s:nxLevel=10
   let s:ow=bufnr('%')
   let s:score=0
 
   " FL changed this so tetris opens below instead of top of window
-  exe 'below sp '.escape(s:s,' ').'|set ma|1,$d' 
+  exe 'below sp '.escape(s:s,' ').'|set ma|1,$d'
 
   let b:col=0
   let b:sh=0
@@ -192,18 +193,23 @@ fu! s:Init()
   se ve=all
   setl bh=delete noswf bt=nofile nf= gcr=a:hor1-blinkon0 nolz
   exe "norm!i    ##\<Esc>".s:WIDTH."a..\<Esc>2a#\<Esc>yy19pGo0\<C-d>    #\<Esc>".(2*s:WIDTH+4-1)."a#\<Esc>yy3pgg"
-
   "FL fixed colors: ctermbg is dark color by default, so matched ctermfg with it for uniform color shapes (replace 'Dark' with 'Light' to get colored patterns on shapes). Also, colors now match official Tetris colors as close as possible.
 
-  hi Bg term=reverse ctermfg=Black ctermbg=Black guifg=Black guibg=Black
+  if s:background
+    hi Bg term=reverse ctermfg=White ctermbg=White guifg=White guibg=White
+    hi Flash term=reverse ctermfg=Yellow ctermbg=Yellow guifg=LightBlue guibg=Blue
+    hi Shape1 term=reverse ctermfg=DarkYellow ctermbg=DarkYellow guifg=DarkYellow guibg=DarkYellow
+    hi Wall term=reverse ctermfg=Blue ctermbg=LightBlue guifg=LightBlue guibg=Blue
+  el
+    hi Bg term=reverse ctermfg=Black ctermbg=Black guifg=Black guibg=Black
+    hi Flash term=reverse ctermfg=DarkBlue ctermbg=DarkBlue guifg=LightBlue guibg=Blue
+    hi Shape1 term=reverse ctermfg=Yellow ctermbg=Yellow guifg=Yellow guibg=Yellow
+    hi Wall term=reverse ctermfg=LightBlue ctermbg=Blue guifg=LightBlue guibg=Blue
+  en
   syn match Bg "\."
-  "FL added texture in Wall (LightBlue) so they can't be confused with Shape2
-  hi Wall term=reverse ctermfg=LightBlue ctermbg=Blue guifg=LightBlue guibg=Blue
   syn match Wall "[#\/|-]"
   hi Shape0 term=reverse ctermfg=DarkCyan ctermbg=DarkCyan guifg=DarkCyan guibg=DarkCyan
   syn match Shape0 "[[\]]"
- "FL fixed typo here, had ctermfg twice
-  hi Shape1 term=reverse ctermfg=DarkYellow ctermbg=DarkYellow guifg=DarkYellow guibg=DarkYellow
   syn match Shape1 "MM"
   hi Shape2 term=reverse ctermfg=DarkBlue ctermbg=DarkBlue guifg=Darklue guibg=DarkBlue
   syn match Shape2 "{}"
@@ -216,15 +222,13 @@ fu! s:Init()
   hi Shape6 term=reverse ctermfg=DarkMagenta ctermbg=DarkMagenta guifg=DarkRed guibg=DarkRed
   syn match Shape6 "$\$"
 
-  "FL added Flash, previously when line was cleared background matched walls. since walls have texture (##), it made the '.' in background visible. This workaround solves it
-  hi Flash term=reverse ctermfg=DarkBlue ctermbg=DarkBlue guifg=LightBlue guibg=Blue
-  
+
   let n="\<Esc>9hji"
   let v1="/--------\\".n "FL, more attractive design for frame of next piece
   let f="|........|".n
   let v2="\\--------/".n
   exe "norm! 21\<C-w>_50\<C-W>|"
-  exe "norm! 1G32\<Bar>i".v1.f.f.f.f.v2."\<Esc>8G32\<Bar>iScore:\<Esc>j2h6i0\<Esc>" 
+  exe "norm! 1G32\<Bar>i".v1.f.f.f.f.v2."\<Esc>8G32\<Bar>iScore:\<Esc>j2h6i0\<Esc>"
   exe "norm! jj32\<Bar>iKeys:\<Esc>bjih,l: Left, Right\<Esc>2Fhjij,k: Down, Rotate\<Esc>"
   exe "norm! Fjji' ': Drop\<Esc>2F'ji+,=: Speed up"
   exe "norm! 2F+jiq,q: Pause, Quit\<esc>"
@@ -253,11 +257,11 @@ fu! s:Init()
   en
   let s:DTIME=500 "FL changed the speed at which pieces fall by default to be more forgiving (~v0.4)
   let s:COUNTER=(s:CNT*s:DTIME)/1000
-  echon 'Delay:'.s:DELAY.' Counter: '.s:COUNTER
+  "echon 'Delay:'.s:DELAY.' Counter: '.s:COUNTER    "Debug information, probably not needed (?)
   if !exists('s:name') || s:name==''
     let s:name=strpart(inputdialog("What's your name?\nIt will be used in the top10 list: "),0,30)
   en
-  let s:mode=confirm('Game mode',"Traditional\nRotating (note: rotating is broken)")-1 "0=Trad, 1=Rotating
+  "let s:mode=confirm('Game mode',"Traditional\nRotating (note: rotating is broken)")-1 "0=Trad, 1=Rotating
 endf
 
 fu! s:Loop(c)
@@ -328,9 +332,12 @@ fu! s:Main()
       let b:y=b:y+1|cal s:Put(b:y,b:x,b:pos,s:DRAW)|redr
     endw
     cal s:Cnt(1)
-    if s:mode
-      exe "norm!1G7|\<C-V>19j2ld18lP"
-    en
+
+    " Rotating mode (To be fixed)
+    "if s:mode
+    "  exe "norm!1G7|\<C-V>19j2ld18lP"
+    "en
+
     cal s:Put(s:NEXTYPOS,s:NEXTXPOS,0,s:CLEAR)
     let b:sh=b:nsh|let b:col=b:ncol
     let b:nsh=(localtime()+100*b:sh)%s:shs
